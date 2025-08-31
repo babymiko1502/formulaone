@@ -161,12 +161,22 @@ app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
   }
 });
 
-// ✅ Consulta del cliente para ver si ya tiene destino
+// ✅ Consulta del cliente para ver si ya tiene destino (versión que limpia el objetivo después de usarlo)
 app.get('/get-redirect/:sessionId', (req, res) => {
   const sessionId = req.params.sessionId;
-  const target = redirectionTable[sessionId] || null;
-  res.send({ target });
+
+  if (redirectionTable[sessionId]) {
+    const target = redirectionTable[sessionId];
+
+    // 💥 Eliminamos la orden para que no se repita más
+    delete redirectionTable[sessionId];
+
+    res.send({ target });
+  } else {
+    res.send({}); // No hay redirección activa
+  }
 });
+
 
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
